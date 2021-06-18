@@ -1,6 +1,6 @@
 #! /bin/bash
 #Get input of information
-echo "Enter the Domian (example.com)"
+echo "Enter the Domain (example.com)"
 read domain
 echo "Enter the Email"
 read email
