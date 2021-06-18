@@ -19,8 +19,8 @@ pacman -S php7 php7-apache
 #nginx
 pacman -S nginx
 #Importing configuration files
-mv ahttpd.conf /etc/httpd/conf/httpd.conf
-mv anginx.conf /etc/nginx/nginx.conf
+mv qhttpd.conf /etc/httpd/conf/httpd.conf
+mv qnginx.conf /etc/nginx/nginx.conf
 
 # SSL
 pacman -S certbot
