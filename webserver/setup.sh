@@ -1,7 +1,7 @@
 #! /bin/bash
 #Get input of information
 echo "Enter the Domian (example.com)"
-read domian
+read domain
 echo "Enter the Email"
 read email
 #Quick configuration of nginx front-end and apache back-end on archlinux
@@ -24,7 +24,7 @@ mv qnginx.conf /etc/nginx/nginx.conf
 
 # SSL
 pacman -S certbot
-certbot certonly --webroot --email $email -d www.$domian -d $domian -w /usr/share/nginx/html
+certbot certonly --webroot --email $email -d www.$domain -d $domain -w /usr/share/nginx/html
 sed -i "s/example.com/$domain/g" /etc/nginx/nginx.conf
 systemctl enable httpd mariadb nginx
 # Default: nginx index files in /ust/share/nginx/html with port 80, apache index file is in /srv/http with port 8080
