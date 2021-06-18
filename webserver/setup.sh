@@ -25,6 +25,6 @@ mv qnginx.conf /etc/nginx/nginx.conf
 # SSL
 pacman -S certbot
 certbot certonly --webroot --email $email -d www.$domian -d $domian -w /usr/share/nginx/html
-sed -n '/example.com/p' /etc/nginx/nginx.conf | sed 's/example.com/$domain/g'
+sed -n '/example.com/p' /etc/nginx/nginx.conf | sed 's/example.com/,$domain/g'
 systemctl enable httpd mariadb nginx
 # Default: nginx index files in /ust/share/nginx/html with port 80, apache index file is in /srv/http with port 8080
