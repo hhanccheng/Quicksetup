@@ -18,9 +18,18 @@ pacman -S php7 php7-apache
 
 #nginx
 pacman -S nginx
+
+# wordpress & phpmyadmin
+pacman -S wordpress phpmyadmin
+
+
 #Importing configuration files
 mv qhttpd.conf /etc/httpd/conf/httpd.conf
 mv qnginx.conf /etc/nginx/nginx.conf
+mv httpd-wordpress.conf /etc/httpd/conf/extra/
+mv phpmyadmin.conf /etc/httpd/conf/extra/
+mysql -uroot -p < wordpress.sql
+
 
 # SSL
 pacman -S certbot
