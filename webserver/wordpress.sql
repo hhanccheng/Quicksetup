@@ -1,3 +1,3 @@
 CREATE DATABASE wordpress;
-GRANT ALL PRIVILEGES ON wordpress.* TO "wp-user"@"localhost" IDENTIFIED BY "paspas!!s123";
+GRANT ALL PRIVILEGES ON wordpress.* TO "wpadmin"@"localhost" IDENTIFIED BY "paspass123";
 FLUSH PRIVILEGES;
