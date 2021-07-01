@@ -9,5 +9,4 @@ echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.d/bbr.conf
 mv parrot.bashrc /etc/bash.bashrc
 mv sshd_config.conf /etc/ssh/sshd_config
 # restart the sshd.service
-systemctl restart ssh
 systemctl restart sshd
