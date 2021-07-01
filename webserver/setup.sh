@@ -14,7 +14,7 @@ mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
 systemctl start mariadb
 mysql_secure_installation
 #php   
-pacman -S php7 php7-apache
+pacman -S php php-apache
 
 #nginx
 pacman -S nginx
