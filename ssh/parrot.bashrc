@@ -124,9 +124,3 @@ if ! shopt -oq posix; then
     . /etc/bash_completion
   fi
 fi
-
-echo "Fail password for root :"
-journalctl | grep "Fail password for root" | awk '{print $11}' | sort | uniq -c | sort -nr | more
-echo "Fail password for invalid user :"
-journalctl | grep "Fail password for invalid user" | awk '{print $13}' | sort | uniq -c | sort -nr | more
-
