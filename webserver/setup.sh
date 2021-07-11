@@ -1,9 +1,5 @@
 #! /bin/bash
-#Get input of information
-echo "Enter the Domain (example.com)"
-read domain
-echo "Enter the Email"
-read email
+
 #Quick configuration of nginx front-end and apache back-end on archlinux
 #apache
 pacman -Syu apache
@@ -19,7 +15,7 @@ pacman -S php php-apache
 #nginx
 pacman -S nginx
 
-systemctl start nginx
+systemctl start nginx httpd mariadb
 # wordpress & phpmyadmin
 pacman -S wordpress phpmyadmin
 
@@ -30,9 +26,7 @@ mv httpd-wordpress.conf /etc/httpd/conf/extra/
 mv phpmyadmin.conf /etc/httpd/conf/extra/
 mysql -uroot -p < wordpress.sql
 
-# SSL
-pacman -S certbot
-certbot certonly --webroot --email $email -d www.$domain -d $domain -w /usr/share/nginx/html
-sed -i "s/example.com/$domain/g" /etc/nginx/nginx.conf
 systemctl enable httpd mariadb nginx
+systemctl start httpd mariadb nginx
+
 # Default: nginx index files in /ust/share/nginx/html with port 80, apache index file is in /srv/http with port 8080
