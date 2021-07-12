@@ -5,8 +5,9 @@ read domain
 echo "Enter the Email"
 read email
 # SSL
-pacman -S certbot
+pacman -Sy certbot
 certbot certonly --webroot --email $email -d www.$domain -d $domain -w /usr/share/nginx/html
+mv qsslnginx.conf /etc/nginx/nginx.conf
 sed -i "s/example.com/$domain/g" /etc/nginx/nginx.conf
 systemctl start httpd mariadb nginx
 
