@@ -15,7 +15,6 @@ pacman -S php php-apache
 #nginx
 pacman -S nginx
 
-systemctl start nginx httpd mariadb
 # wordpress & phpmyadmin
 pacman -S wordpress phpmyadmin
 
