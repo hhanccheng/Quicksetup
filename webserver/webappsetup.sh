@@ -8,3 +8,5 @@ cp qphp.ini /etc/php/php.ini
 cp qwp-config.php /usr/share/webapps/wordpress/wp-conifg.php
 
 mysql -uroot -p < wordpress.sql
+
+systemctl restart mariadb httpd nginx
