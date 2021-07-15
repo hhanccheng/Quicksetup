@@ -4,6 +4,14 @@ echo "client email:"
 read email
 pacman -S strongswan
 
+cp ipsec.conf /etc/ipsec.conf
+cp ipsec.secrets /etc/ipsec.secrets
+
+ipsec rereadsecrets
+
+cp 10-net-forward.conf /etc/sysctl.d/10-net-forward.conf
+cp dhcp.conf /etc/strongswan.d/charon/dhcp.conf
+
 cd /etc/ipsec.d/
 ipsec pki --gen --type rsa --size 4096 --outform pem > private/strongswanKey.pem
 chmod 600 private/strongswanKey.pem
@@ -39,14 +47,6 @@ openssl pkcs12 -export -inkey private/ClientKey.pem \
 	  -certfile cacerts/strongswanCert.pem \
 	  -caname "strongSwan Root CA" \
 	  -out Client.p12
-
-cp ipsec.conf /etc/ipsec.conf
-cp ipsec.secrets /etc/ipsec.secrets
-
-ipsec rereadsecrets
-
-cp 10-net-forward.conf /etc/sysctl.d/10-net-forward.conf
-cp dhcp.conf /etc/strongswan.d/charon/dhcp.conf
 
 systemctl start strongswan
 systemctl enable strongswan
