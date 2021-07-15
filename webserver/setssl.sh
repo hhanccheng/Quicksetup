@@ -7,7 +7,7 @@ read email
 # SSL
 pacman -Sy certbot
 certbot certonly --webroot --email $email -d www.$domain -d $domain -w /usr/share/nginx/html
-mv qsslnginx.conf /etc/nginx/nginx.conf
+mv sslnginx.conf /etc/nginx/nginx.conf
 sed -i "s/example.com/$domain/g" /etc/nginx/nginx.conf
 systemctl restart httpd mariadb nginx
 

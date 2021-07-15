@@ -16,8 +16,8 @@ pacman -S php php-apache
 pacman -S nginx
 
 #configuration files
-mv qhttpd.conf /etc/httpd/conf/httpd.conf
-mv qnginx.conf /etc/nginx/nginx.conf
+mv httpd.conf /etc/httpd/conf/httpd.conf
+mv nginx.conf /etc/nginx/nginx.conf
 
 systemctl enable httpd mariadb nginx
 systemctl start httpd mariadb nginx
