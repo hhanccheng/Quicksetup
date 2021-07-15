@@ -39,3 +39,5 @@ openssl pkcs12 -export -inkey private/ClientKey.pem \
 	  -certfile cacerts/strongswanCert.pem \
 	  -caname "strongSwan Root CA" \
 	  -out Client.p12
+
+cp ipsec.conf /etc/ipsec.conf
