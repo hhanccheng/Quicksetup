@@ -1,6 +1,6 @@
 #! /bin/bash
 VAR="eth0"
-HOST_IP=$(ip addr $VAR | grep "inet addr" | awk '{ print $2}' | awk -F: '{print $2}')
+HOST_IP=$(ip addr | grep "global eth0" | awk -F "/" '{ print $1}' | awk '{print $2}')
 echo "client email:"
 read email
 pacman -S strongswan
