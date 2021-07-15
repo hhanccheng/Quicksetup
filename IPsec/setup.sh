@@ -41,3 +41,13 @@ openssl pkcs12 -export -inkey private/ClientKey.pem \
 	  -out Client.p12
 
 cp ipsec.conf /etc/ipsec.conf
+cp ipsec.secrets /etc/ipsec.secrets
+
+ipsec rereadsecrets
+
+cp 10-net-forward.conf /etc/sysctl.d/10-net-forward.conf
+cp dhcp.conf /etc/strongswan.d/charon/dhcp.conf
+
+systemctl start strongswan
+systemctl enable strongswan
+
