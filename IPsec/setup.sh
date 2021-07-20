@@ -1,28 +1,4 @@
-#!/bin/sh
-#
-# Script for automatic setup of an IPsec VPN server on Ubuntu and Debian
-# Works on any dedicated server or virtual private server (VPS)
-#
-# DO NOT RUN THIS SCRIPT ON YOUR PC OR MAC!
-#
-# The latest version of this script is available at:
-# https://github.com/hwdsl2/setup-ipsec-vpn
-#
-# Copyright (C) 2014-2021 Lin Song <linsongui@gmail.com>
-# Based on the work of Thomas Sarlandie (Copyright 2012)
-#
-# This work is licensed under the Creative Commons Attribution-ShareAlike 3.0
-# Unported License: http://creativecommons.org/licenses/by-sa/3.0/
-#
-# Attribution required: please include my name in any derivative and let me
-# know how you have improved it!
-
-# =====================================================
-
-# Define your own values for these variables
-# - IPsec pre-shared key, VPN username and password
-# - All values MUST be placed inside 'single quotes'
-# - DO NOT use these special characters within values: \ " '
+#! /bin/bash
 
 YOUR_IPSEC_PSK=''
 YOUR_USERNAME=''
@@ -39,7 +15,6 @@ SYS_DT=$(date +%F-%T | tr ':' '_')
 
 exiterr()  { echo "Error: $1" >&2; exit 1; }
 conf_bk() { /bin/cp -f "$1" "$1.old-$SYS_DT" 2>/dev/null; }
-bigecho() { echo "## $1"; }
 
 check_ip() {
   IP_REGEX='^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
@@ -55,7 +30,7 @@ pacman -S strongswan
 [ -n "$YOUR_PASSWORD" ] && VPN_PASSWORD="$YOUR_PASSWORD"
 
 if [ -z "$VPN_IPSEC_PSK" ] && [ -z "$VPN_USER" ] && [ -z "$VPN_PASSWORD" ]; then
-  bigecho "VPN credentials not set by user. Generating random PSK and password..."
+  echo "VPN credentials not set by user. Generating random PSK and password..."
   VPN_IPSEC_PSK=$(LC_CTYPE=C tr -dc 'A-HJ-NPR-Za-km-z2-9' < /dev/urandom | head -c 20)
   VPN_USER=vpnuser
   VPN_PASSWORD=$(LC_CTYPE=C tr -dc 'A-HJ-NPR-Za-km-z2-9' < /dev/urandom | head -c 16)
@@ -85,7 +60,7 @@ if [ -x /sbin/iptables ] && ! iptables -nL INPUT >/dev/null 2>&1; then
 fi
 
 
-bigecho "Trying to auto discover IP of this server..."
+echo "Trying to auto discover IP of this server..."
 
 # In case auto IP discovery fails, enter server's public IP here.
 public_ip=${VPN_PUBLIC_IP:-''}
@@ -93,22 +68,15 @@ check_ip "$public_ip" || public_ip=$(dig @resolver1.opendns.com -t A -4 myip.ope
 check_ip "$public_ip" || public_ip=$(wget -t 3 -T 15 -qO- http://ipv4.icanhazip.com)
 check_ip "$public_ip" || exiterr "Cannot detect this server's public IP. Edit the script and manually enter it."
 
-bigecho "Installing packages required for the VPN..."
+echo "Installing packages required for the VPN..."
 
-pacman -S libnss3-dev libnspr4-dev pkg-config \
-libpam0g-dev libcap-ng-dev libcap-ng-utils libselinux1-dev \
-libcurl4-nss-dev flex bison gcc make libnss3-tools \
-libevent-dev libsystemd-dev uuid-runtime ppp xl2tpd
+pacman -S ppp xl2tpd
 
 
-bigecho "Installing Fail2Ban to protect SSH..."
-pacman -S install fail2ban
+echo "Installing Fail2Ban to protect SSH..."
+pacman -S fail2ban
 
-bigecho "IKEv2 script..."
-sh ikev2.sh
-
-
-bigecho "Creating VPN configuration..."
+echo "Creating VPN configuration..."
 
 L2TP_NET=${VPN_L2TP_NET:-'192.168.42.0/24'}
 L2TP_LOCAL=${VPN_L2TP_LOCAL:-'192.168.42.1'}
@@ -235,13 +203,9 @@ cat > /etc/ipsec.d/passwd <<EOF
 $VPN_USER:$VPN_PASSWORD_ENC:xauth-psk
 EOF
 
-bigecho "Updating sysctl settings..."
-
-if ! grep -qs "hwdsl2 VPN script" /etc/sysctl.conf; then
-  conf_bk "/etc/sysctl.conf"
+echo "Updating sysctl settings..."
 cat >> /etc/sysctl.conf <<EOF
 
-# Added by hwdsl2 VPN script
 kernel.msgmnb = 65536
 kernel.msgmax = 65536
 
@@ -262,48 +226,41 @@ net.ipv4.tcp_wmem = 10240 87380 12582912
 EOF
 fi
 
-bigecho "Updating IPTables rules..."
+echo "Updating iptables rules..."
 
 IPT_FILE=/etc/iptables.rules
 IPT_FILE2=/etc/iptables/rules.v4
-ipt_flag=0
-if ! grep -qs "hwdsl2 VPN script" "$IPT_FILE"; then
-  ipt_flag=1
-fi
 
 ipi='iptables -I INPUT'
 ipf='iptables -I FORWARD'
 ipp='iptables -t nat -I POSTROUTING'
 res='RELATED,ESTABLISHED'
-if [ "$ipt_flag" = "1" ]; then
-  service fail2ban stop >/dev/null 2>&1
-  iptables-save > "$IPT_FILE.old-$SYS_DT"
-  $ipi 1 -p udp --dport 1701 -m policy --dir in --pol none -j DROP
-  $ipi 2 -m conntrack --ctstate INVALID -j DROP
-  $ipi 3 -m conntrack --ctstate "$res" -j ACCEPT
-  $ipi 4 -p udp -m multiport --dports 500,4500 -j ACCEPT
-  $ipi 5 -p udp --dport 1701 -m policy --dir in --pol ipsec -j ACCEPT
-  $ipi 6 -p udp --dport 1701 -j DROP
-  $ipf 1 -m conntrack --ctstate INVALID -j DROP
-  $ipf 2 -i "$NET_IFACE" -o ppp+ -m conntrack --ctstate "$res" -j ACCEPT
-  $ipf 3 -i ppp+ -o "$NET_IFACE" -j ACCEPT
-  $ipf 4 -i ppp+ -o ppp+ -j ACCEPT
-  $ipf 5 -i "$NET_IFACE" -d "$XAUTH_NET" -m conntrack --ctstate "$res" -j ACCEPT
-  $ipf 6 -s "$XAUTH_NET" -o "$NET_IFACE" -j ACCEPT
-  $ipf 7 -s "$XAUTH_NET" -o ppp+ -j ACCEPT
-  iptables -A FORWARD -j DROP
-  $ipp -s "$XAUTH_NET" -o "$NET_IFACE" -m policy --dir out --pol none -j MASQUERADE
-  $ipp -s "$L2TP_NET" -o "$NET_IFACE" -j MASQUERADE
-  echo "# Modified by hwdsl2 VPN script" > "$IPT_FILE"
-  iptables-save >> "$IPT_FILE"
+systemctl stop fail2ban
+iptables-save > "$IPT_FILE.old-$SYS_DT"
+$ipi 1 -p udp --dport 1701 -m policy --dir in --pol none -j DROP
+$ipi 2 -m conntrack --ctstate INVALID -j DROP
+$ipi 3 -m conntrack --ctstate "$res" -j ACCEPT
+$ipi 4 -p udp -m multiport --dports 500,4500 -j ACCEPT
+$ipi 5 -p udp --dport 1701 -m policy --dir in --pol ipsec -j ACCEPT
+$ipi 6 -p udp --dport 1701 -j DROP
+$ipf 1 -m conntrack --ctstate INVALID -j DROP
+$ipf 2 -i "$NET_IFACE" -o ppp+ -m conntrack --ctstate "$res" -j ACCEPT
+$ipf 3 -i ppp+ -o "$NET_IFACE" -j ACCEPT
+$ipf 4 -i ppp+ -o ppp+ -j ACCEPT
+$ipf 5 -i "$NET_IFACE" -d "$XAUTH_NET" -m conntrack --ctstate "$res" -j ACCEPT
+$ipf 6 -s "$XAUTH_NET" -o "$NET_IFACE" -j ACCEPT
+$ipf 7 -s "$XAUTH_NET" -o ppp+ -j ACCEPT
+iptables -A FORWARD -j DROP
+$ipp -s "$XAUTH_NET" -o "$NET_IFACE" -m policy --dir out --pol none -j MASQUERADE
+$ipp -s "$L2TP_NET" -o "$NET_IFACE" -j MASQUERADE
+iptables-save >> "$IPT_FILE"
 
-  if [ -f "$IPT_FILE2" ]; then
-    conf_bk "$IPT_FILE2"
-    /bin/cp -f "$IPT_FILE" "$IPT_FILE2"
-  fi
+if [ -f "$IPT_FILE2" ]; then
+  conf_bk "$IPT_FILE2"
+  /bin/cp -f "$IPT_FILE" "$IPT_FILE2"
 fi
 
-bigecho "Enabling services on boot..."
+echo "Enabling services on boot..."
 
 IPT_PST=/etc/init.d/iptables-persistent
 IPT_PST2=/usr/share/netfilter-persistent/plugins.d/15-ip4tables
@@ -358,8 +315,6 @@ if ! grep -qs "hwdsl2 VPN script" /etc/rc.local; then
     echo '#!/bin/sh' > /etc/rc.local
   fi
 cat >> /etc/rc.local <<'EOF'
-
-# Added by hwdsl2 VPN script
 (sleep 15
 service ipsec restart
 service xl2tpd restart
@@ -368,7 +323,7 @@ exit 0
 EOF
 fi
 
-bigecho "Starting services..."
+echo "Starting services..."
 
 sysctl -e -q -p
 
@@ -380,18 +335,6 @@ service fail2ban restart 2>/dev/null
 service ipsec restart 2>/dev/null
 service xl2tpd restart 2>/dev/null
 
-swan_ver_url="https://dl.ls20.com/v1/$os_type/$os_ver/swanver?arch=$os_arch&ver=$SWAN_VER"
-swan_ver_latest=$(wget -t 3 -T 15 -qO- "$swan_ver_url")
-if printf '%s' "$swan_ver_latest" | grep -Eq '^([3-9]|[1-9][0-9]{1,2})(\.([0-9]|[1-9][0-9]{1,2})){1,2}$' \
-  && [ -n "$SWAN_VER" ] && [ "$SWAN_VER" != "$swan_ver_latest" ] \
-  && printf '%s\n%s' "$SWAN_VER" "$swan_ver_latest" | sort -C -V; then
-cat <<EOF
-
-Note: A newer version of Libreswan ($swan_ver_latest) is available.
-      To update, run:
-      wget https://git.io/vpnupgrade -O vpnup.sh && sudo sh vpnup.sh
-EOF
-fi
 
 cat <<EOF
 
