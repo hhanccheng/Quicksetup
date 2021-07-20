@@ -35,54 +35,6 @@ check_run_as_root() {
   fi
 }
 
-check_os_type() {
-  os_arch=$(uname -m | tr -dc 'A-Za-z0-9_-')
-  rh_file="/etc/redhat-release"
-  if grep -qs -e "release 7" -e "release 8" "$rh_file"; then
-    os_type=centos
-    if grep -qs "Red Hat" "$rh_file"; then
-      os_type=rhel
-    fi
-    if grep -qs "release 7" "$rh_file"; then
-      os_ver=7
-    elif grep -qs "release 8" "$rh_file"; then
-      os_ver=8
-      if grep -qi stream "$rh_file"; then
-        os_ver=8s
-      fi
-    fi
-  elif grep -qs "Amazon Linux release 2" /etc/system-release; then
-    os_type=amzn
-    os_ver=2
-  else
-    os_type=$(lsb_release -si 2>/dev/null)
-    [ -z "$os_type" ] && [ -f /etc/os-release ] && os_type=$(. /etc/os-release && printf '%s' "$ID")
-    case $os_type in
-      [Uu]buntu)
-        os_type=ubuntu
-        ;;
-      [Dd]ebian)
-        os_type=debian
-        ;;
-      [Rr]aspbian)
-        os_type=raspbian
-        ;;
-      [Aa]lpine)
-        os_type=alpine
-        [ "$in_container" != "1" ] && exiterr "This script only supports Alpine Linux in a Docker container."
-        ;;
-      *)
-        exiterr "This script only supports Ubuntu, Debian, CentOS/RHEL 7/8 and Amazon Linux 2."
-        ;;
-    esac
-    if [ "$os_type" = "alpine" ]; then
-      os_ver=$(. /etc/os-release && printf '%s' "$VERSION_ID")
-    else
-      os_ver=$(sed 's/\..*//' /etc/debian_version | tr -dc 'A-Za-z0-9')
-    fi
-  fi
-}
-
 get_update_url() {
   update_url=vpnupgrade
   if [ "$os_type" = "centos" ] || [ "$os_type" = "rhel" ]; then
@@ -270,70 +222,6 @@ check_server_cert_exists() {
   fi
 }
 
-check_swan_ver() {
-  if [ "$in_container" = "0" ]; then
-    swan_ver_url="https://dl.ls20.com/v1/$os_type/$os_ver/swanverikev2?arch=$os_arch&ver=$swan_ver&auto=$use_defaults"
-  else
-    swan_ver_url="https://dl.ls20.com/v1/docker/$os_type/$os_arch/swanverikev2?ver=$swan_ver&auto=$use_defaults"
-  fi
-  swan_ver_latest=$(wget -t 3 -T 15 -qO- "$swan_ver_url")
-}
-
-run_swan_update() {
-  get_update_url
-  TMPDIR=$(mktemp -d /tmp/vpnup.XXX 2>/dev/null)
-  if [ -d "$TMPDIR" ]; then
-    set -x
-    if wget -t 3 -T 30 -q -O "$TMPDIR/vpnup.sh" "$update_url"; then
-      /bin/sh "$TMPDIR/vpnup.sh"
-    fi
-    { set +x; } 2>&-
-    [ ! -s "$TMPDIR/vpnup.sh" ] && echo "Error: Could not download update script." >&2
-    /bin/rm -f "$TMPDIR/vpnup.sh"
-    /bin/rmdir "$TMPDIR"
-  else
-    echo "Error: Could not create temporary directory." >&2
-  fi
-  read -n 1 -s -r -p "Press any key to continue IKEv2 setup..."
-  echo
-}
-
-select_swan_update() {
-  if printf '%s' "$swan_ver_latest" | grep -Eq '^([3-9]|[1-9][0-9]{1,2})(\.([0-9]|[1-9][0-9]{1,2})){1,2}$' \
-    && [ "$swan_ver" != "$swan_ver_latest" ] \
-    && printf '%s\n%s' "$swan_ver" "$swan_ver_latest" | sort -C -V; then
-    echo "Note: A newer version of Libreswan ($swan_ver_latest) is available."
-    echo "      It is recommended to update Libreswan before setting up IKEv2."
-    if [ "$in_container" = "0" ]; then
-      echo
-      printf "Do you want to update Libreswan? [Y/n] "
-      read -r response
-      case $response in
-        [yY][eE][sS]|[yY]|'')
-          echo
-          run_swan_update
-          ;;
-        *)
-          echo
-          ;;
-      esac
-    else
-      echo "      To update this Docker image, see: https://git.io/updatedockervpn"
-      echo
-      printf "Do you want to continue anyway? [y/N] "
-      read -r response
-      case $response in
-        [yY][eE][sS]|[yY])
-          echo
-          ;;
-        *)
-          echo "Abort. No changes were made."
-          exit 1
-          ;;
-      esac
-    fi
-  fi
-}
 
 show_welcome() {
 cat <<'EOF'
@@ -578,23 +466,6 @@ check_mobike_support() {
     fi
   fi
 
-  # Linux kernels on Ubuntu do not support MOBIKE
-  if [ "$in_container" = "0" ]; then
-    if [ "$os_type" = "ubuntu" ] || uname -v | grep -qi ubuntu; then
-      mobike_support=0
-    fi
-  else
-    if uname -v | grep -qi ubuntu; then
-      mobike_support=0
-    fi
-  fi
-
-  if [ "$mobike_support" = "1" ]; then
-    bigecho2 "Checking for MOBIKE support... available"
-  else
-    bigecho2 "Checking for MOBIKE support... not available"
-  fi
-}
 
 select_mobike() {
   echo
@@ -721,27 +592,7 @@ export_p12_file() {
 }
 
 install_base64_uuidgen() {
-  if ! command -v base64 >/dev/null 2>&1 || ! command -v uuidgen >/dev/null 2>&1; then
-    bigecho2 "Installing required packages..."
-    if [ "$os_type" = "ubuntu" ] || [ "$os_type" = "debian" ] || [ "$os_type" = "raspbian" ]; then
-      export DEBIAN_FRONTEND=noninteractive
-      apt-get -yqq update || exiterr "'apt-get update' failed."
-    fi
-  fi
-  if ! command -v base64 >/dev/null 2>&1; then
-    if [ "$os_type" = "ubuntu" ] || [ "$os_type" = "debian" ] || [ "$os_type" = "raspbian" ]; then
-      apt-get -yqq install coreutils >/dev/null || exiterr "'apt-get install' failed."
-    else
-      yum -y -q install coreutils >/dev/null || exiterr "'yum install' failed."
-    fi
-  fi
-  if ! command -v uuidgen >/dev/null 2>&1; then
-    if [ "$os_type" = "ubuntu" ] || [ "$os_type" = "debian" ] || [ "$os_type" = "raspbian" ]; then
-      apt-get -yqq install uuid-runtime >/dev/null || exiterr "'apt-get install' failed."
-    else
-      yum -y -q install util-linux >/dev/null || exiterr "'yum install' failed."
-    fi
-  fi
+  pacman -S coreutils >/dev/null
 }
 
 create_mobileconfig() {
@@ -1052,28 +903,6 @@ EOF
   fi
 }
 
-apply_ubuntu1804_nss_fix() {
-  if [ "$os_type" = "ubuntu" ] && [ "$os_ver" = "bustersid" ] && [ "$os_arch" = "x86_64" ]; then
-    nss_url1="https://mirrors.kernel.org/ubuntu/pool/main/n/nss"
-    nss_url2="https://mirrors.kernel.org/ubuntu/pool/universe/n/nss"
-    nss_deb1="libnss3_3.49.1-1ubuntu1.5_amd64.deb"
-    nss_deb2="libnss3-dev_3.49.1-1ubuntu1.5_amd64.deb"
-    nss_deb3="libnss3-tools_3.49.1-1ubuntu1.5_amd64.deb"
-    TMPDIR=$(mktemp -d /tmp/nss.XXX 2>/dev/null)
-    if [ -d "$TMPDIR" ]; then
-      bigecho2 "Applying fix for NSS bug on Ubuntu 18.04..."
-      export DEBIAN_FRONTEND=noninteractive
-      if wget -t 3 -T 30 -q -O "$TMPDIR/1.deb" "$nss_url1/$nss_deb1" \
-        && wget -t 3 -T 30 -q -O "$TMPDIR/2.deb" "$nss_url1/$nss_deb2" \
-        && wget -t 3 -T 30 -q -O "$TMPDIR/3.deb" "$nss_url2/$nss_deb3"; then
-        apt-get -yqq update
-        apt-get -yqq install "$TMPDIR/1.deb" "$TMPDIR/2.deb" "$TMPDIR/3.deb" >/dev/null
-      fi
-      /bin/rm -f "$TMPDIR/1.deb" "$TMPDIR/2.deb" "$TMPDIR/3.deb"
-      /bin/rmdir "$TMPDIR"
-    fi
-  fi
-}
 
 restart_ipsec_service() {
   if [ "$in_container" = "0" ] || { [ "$in_container" = "1" ] && service ipsec status >/dev/null 2>&1; } then
@@ -1138,21 +967,6 @@ print_client_revoked() {
   echo "Certificate '$client_name' revoked!"
 }
 
-show_swan_update_info() {
-  if printf '%s' "$swan_ver_latest" | grep -Eq '^([3-9]|[1-9][0-9]{1,2})(\.([0-9]|[1-9][0-9]{1,2})){1,2}$' \
-    && [ "$swan_ver" != "$swan_ver_latest" ] \
-    && printf '%s\n%s' "$swan_ver" "$swan_ver_latest" | sort -C -V; then
-    echo
-    echo "Note: A newer version of Libreswan ($swan_ver_latest) is available."
-    if [ "$in_container" = "0" ]; then
-      get_update_url
-      echo "      To update, run:"
-      echo "      wget $update_url -O vpnup.sh && sudo sh vpnup.sh"
-    else
-      echo "      To update this Docker image, see: https://git.io/updatedockervpn"
-    fi
-  fi
-}
 
 print_setup_complete() {
   printf '\e[2K\r'
@@ -1433,7 +1247,6 @@ ikev2setup() {
   check_swan_ver
 
   if [ "$use_defaults" = "0" ]; then
-    select_swan_update
     show_welcome
     enter_server_address
     check_server_cert_exists
@@ -1482,21 +1295,11 @@ ikev2setup() {
     mobike_enable="$mobike_support"
   fi
 
-  apply_ubuntu1804_nss_fix
   create_ca_server_certs
   create_client_cert
   export_client_config
   add_ikev2_connection
-  if [ "$os_type" = "alpine" ]; then
-    ipsec auto --add ikev2-cp >/dev/null
-  else
-    restart_ipsec_service
-  fi
-
-  if [ "$use_defaults" = "1" ]; then
-    show_swan_update_info
-  fi
-
+  restart_ipsec_service
   print_setup_complete
   print_client_info
 }
