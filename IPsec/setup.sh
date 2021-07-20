@@ -102,10 +102,10 @@ libevent-dev libsystemd-dev uuid-runtime ppp xl2tpd >/dev/null
 
 
 bigecho "Installing Fail2Ban to protect SSH..."
-pamcan -S install fail2ban >/dev/null
+pacman -S install fail2ban >/dev/null
 
 bigecho "IKEv2 script..."
-sh ikve2.sh
+sh ikev2.sh
 
 
 bigecho "Creating VPN configuration..."
