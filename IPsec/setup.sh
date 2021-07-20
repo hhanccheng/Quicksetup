@@ -98,11 +98,11 @@ bigecho "Installing packages required for the VPN..."
 pacman -S libnss3-dev libnspr4-dev pkg-config \
 libpam0g-dev libcap-ng-dev libcap-ng-utils libselinux1-dev \
 libcurl4-nss-dev flex bison gcc make libnss3-tools \
-libevent-dev libsystemd-dev uuid-runtime ppp xl2tpd >/dev/null
+libevent-dev libsystemd-dev uuid-runtime ppp xl2tpd
 
 
 bigecho "Installing Fail2Ban to protect SSH..."
-pacman -S install fail2ban >/dev/null
+pacman -S install fail2ban
 
 bigecho "IKEv2 script..."
 sh ikev2.sh
