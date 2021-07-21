@@ -216,7 +216,6 @@ net.core.rmem_max = 12582912
 net.ipv4.tcp_rmem = 10240 87380 12582912
 net.ipv4.tcp_wmem = 10240 87380 12582912
 EOF
-fi
 
 echo "Updating iptables rules..."
 
