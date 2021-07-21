@@ -4,12 +4,6 @@ YOUR_IPSEC_PSK=''
 YOUR_USERNAME=''
 YOUR_PASSWORD=''
 
-# Important notes:   https://git.io/vpnnotes
-# Setup VPN clients: https://git.io/vpnclients
-# IKEv2 guide:       https://git.io/ikev2
-
-# =====================================================
-
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 SYS_DT=$(date +%F-%T | tr ':' '_')
 
@@ -20,8 +14,6 @@ check_ip() {
   IP_REGEX='^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
   printf '%s' "$1" | tr -d '\n' | grep -Eq "$IP_REGEX"
 }
-
-vpnsetup() {
 
 pacman -S strongswan
 
@@ -359,12 +351,5 @@ IKEv2 guide:       https://git.io/ikev2
 
 EOF
 
-}
-
 systemctl start strongswan
 systemctl enable strongswan
-
-## Defer setup until we have the complete script
-vpnsetup "$@"
-
-exit 0
