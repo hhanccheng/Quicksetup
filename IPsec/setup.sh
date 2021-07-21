@@ -308,9 +308,9 @@ chmod +x /etc/rc.local
 chmod 600 /etc/ipsec.secrets* /etc/ppp/chap-secrets* /etc/ipsec.d/passwd*
 
 mkdir -p /run/pluto
-service fail2ban restart
-service ipsec restart
-service xl2tpd restart
+systemctl restart fail2ban
+systemctl restart ipsec
+systemctl restart xl2tpd 
 systemctl start strongswan
 systemctl enable strongswan
 
