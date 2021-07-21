@@ -15,7 +15,7 @@ check_ip() {
   printf '%s' "$1" | tr -d '\n' | grep -Eq "$IP_REGEX"
 }
 
-pacman -S strongswan
+pacman -S strongswan 2>/dev/null
 
 [ -n "$YOUR_IPSEC_PSK" ] && VPN_IPSEC_PSK="$YOUR_IPSEC_PSK"
 [ -n "$YOUR_USERNAME" ] && VPN_USER="$YOUR_USERNAME"
@@ -61,11 +61,11 @@ check_ip "$public_ip" || exiterr "Cannot detect this server's public IP. Edit th
 
 echo "Installing packages required for the VPN..."
 
-pacman -S ppp xl2tpd
+pacman -S ppp xl2tpd 2>/dev/null
 
 
 echo "Installing Fail2Ban to protect SSH..."
-pacman -S fail2ban
+pacman -S fail2ban 2>/dev/null
 
 echo "Creating VPN configuration..."
 
@@ -221,6 +221,8 @@ echo "Updating iptables rules..."
 IPT_FILE=/etc/iptables.rules
 IPT_FILE2=/etc/iptables/rules.v4
 
+NET_IFACE=eth0
+
 ipi='iptables -I INPUT'
 ipf='iptables -I FORWARD'
 ipp='iptables -t nat -I POSTROUTING'
@@ -315,7 +317,7 @@ fi
 
 echo "Starting services..."
 
-sysctl -e -q -p
+sysctl -e -q -p 2>/dev/null
 
 chmod +x /etc/rc.local
 chmod 600 /etc/ipsec.secrets* /etc/ppp/chap-secrets* /etc/ipsec.d/passwd*
