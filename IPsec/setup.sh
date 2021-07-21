@@ -15,7 +15,7 @@ check_ip() {
   printf '%s' "$1" | tr -d '\n' | grep -Eq "$IP_REGEX"
 }
 
-pacman -S strongswan 2>/dev/null
+pacman -S strongswan
 
 [ -n "$YOUR_IPSEC_PSK" ] && VPN_IPSEC_PSK="$YOUR_IPSEC_PSK"
 [ -n "$YOUR_USERNAME" ] && VPN_USER="$YOUR_USERNAME"
@@ -61,11 +61,11 @@ check_ip "$public_ip" || exiterr "Cannot detect this server's public IP. Edit th
 
 echo "Installing packages required for the VPN..."
 
-pacman -S ppp xl2tpd 2>/dev/null
+pacman -S ppp xl2tpd
 
 
 echo "Installing Fail2Ban to protect SSH..."
-pacman -S fail2ban 2>/dev/null
+pacman -S fail2ban
 
 echo "Creating VPN configuration..."
 
@@ -299,34 +299,20 @@ for svc in fail2ban ipsec xl2tpd; do
   systemctl enable "$svc" 2>/dev/null
 done
 
-if ! grep -qs "hwdsl2 VPN script" /etc/rc.local; then
-  if [ -f /etc/rc.local ]; then
-    conf_bk "/etc/rc.local"
-    sed --follow-symlinks -i '/^exit 0/d' /etc/rc.local
-  else
-    echo '#!/bin/sh' > /etc/rc.local
-  fi
-cat >> /etc/rc.local <<'EOF'
-(sleep 15
-service ipsec restart
-service xl2tpd restart
-echo 1 > /proc/sys/net/ipv4/ip_forward)&
-exit 0
-EOF
-fi
 
 echo "Starting services..."
 
-sysctl -e -q -p 2>/dev/null
+sysctl -e -q -p
 
 chmod +x /etc/rc.local
 chmod 600 /etc/ipsec.secrets* /etc/ppp/chap-secrets* /etc/ipsec.d/passwd*
 
 mkdir -p /run/pluto
-service fail2ban restart 2>/dev/null
-service ipsec restart 2>/dev/null
-service xl2tpd restart 2>/dev/null
-
+service fail2ban restart
+service ipsec restart
+service xl2tpd restart
+systemctl start strongswan
+systemctl enable strongswan
 
 cat <<EOF
 
@@ -340,6 +326,3 @@ Password: $VPN_PASSWORD
 ================================================
 
 EOF
-
-systemctl start strongswan
-systemctl enable strongswan
