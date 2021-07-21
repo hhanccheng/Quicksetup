@@ -302,8 +302,6 @@ done
 
 echo "Starting services..."
 
-sysctl -eqp
-
 chmod +x /etc/rc.local
 chmod 600 /etc/ipsec.secrets* /etc/ppp/chap-secrets* /etc/ipsec.d/passwd*
 
