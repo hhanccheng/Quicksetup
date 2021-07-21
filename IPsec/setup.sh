@@ -1,8 +1,8 @@
 #! /bin/bash
 
-YOUR_IPSEC_PSK=''
-YOUR_USERNAME=''
-YOUR_PASSWORD=''
+YOUR_IPSEC_PSK='test'
+YOUR_USERNAME='test'
+YOUR_PASSWORD='test'
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 SYS_DT=$(date +%F-%T | tr ':' '_')
@@ -294,7 +294,7 @@ EOF
   fi
 fi
 
-for svc in fail2ban ipsec xl2tpd; do
+for svc in fail2ban ipsec xl2tpd strongswan; do
   update-rc.d "$svc" enable >/dev/null 2>&1
   systemctl enable "$svc" 2>/dev/null
 done
@@ -309,10 +309,9 @@ chmod 600 /etc/ipsec.secrets* /etc/ppp/chap-secrets* /etc/ipsec.d/passwd*
 
 mkdir -p /run/pluto
 systemctl restart fail2ban
-systemctl restart ipsec
+ipsec rereadsecrets
 systemctl restart xl2tpd 
-systemctl start strongswan
-systemctl enable strongswan
+systemctl restart strongswan
 
 cat <<EOF
 
