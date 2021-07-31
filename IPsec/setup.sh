@@ -15,7 +15,7 @@ check_ip() {
   printf '%s' "$1" | tr -d '\n' | grep -Eq "$IP_REGEX"
 }
 
-pacman -S strongswan
+pacman -S strongswan xl2tpd
 
 [ -n "$YOUR_IPSEC_PSK" ] && VPN_IPSEC_PSK="$YOUR_IPSEC_PSK"
 [ -n "$YOUR_USERNAME" ] && VPN_USER="$YOUR_USERNAME"
@@ -97,7 +97,7 @@ conn L2TP-PSK
      type=transport
      left=192.168.0.123           # Replace with your local IP address (private, behind NAT IP is okay as well)
      leftprotoport=17/1701
-     right=68.68.32.79            # Replace with your VPN server's IP
+     right=192.3.48.74            # Replace with your VPN server's IP
      rightprotoport=17/1701
 EOF
 
