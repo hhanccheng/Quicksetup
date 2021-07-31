@@ -8,7 +8,6 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 SYS_DT=$(date +%F-%T | tr ':' '_')
 
 exiterr()  { echo "Error: $1" >&2; exit 1; }
-conf_bk() { /bin/cp -f "$1" "$1.old-$SYS_DT" 2>/dev/null; }
 
 check_ip() {
   IP_REGEX='^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
@@ -107,7 +106,6 @@ if uname -m | grep -qi '^arm'; then
 fi
 
 # Specify IPsec PSK
-conf_bk "/etc/ipsec.secrets"
 cat > /etc/ipsec.secrets <<EOF
 %any  %any  : PSK "$YOUR_IPSEC_PSK"
 EOF
@@ -160,12 +158,10 @@ EOF
 fi
 
 # Create VPN credentials
-conf_bk "/etc/ppp/chap-secrets"
 cat > /etc/ppp/chap-secrets <<EOF
 "$VPN_USER" l2tpd "$VPN_PASSWORD" *
 EOF
 
-conf_bk "/etc/ipsec.d/passwd"
 VPN_PASSWORD_ENC=$(openssl passwd -1 "$VPN_PASSWORD")
 cat > /etc/ipsec.d/passwd <<EOF
 $VPN_USER:$VPN_PASSWORD_ENC:xauth-psk
@@ -225,7 +221,6 @@ $ipp -s "$L2TP_NET" -o "$NET_IFACE" -j MASQUERADE
 iptables-save >> "$IPT_FILE"
 
 if [ -f "$IPT_FILE2" ]; then
-  conf_bk "$IPT_FILE2"
   /bin/cp -f "$IPT_FILE" "$IPT_FILE2"
 fi
 
@@ -288,7 +283,7 @@ systemctl start fail2ban
 ipsec rereadsecrets
 systemctl start xl2tpd 
 systemctl start strongswan
-ipsec auto --up L2TP-PSK
+ipsec up L2TP-PSK
 bash -c 'echo "c vpn-connection" > /var/run/xl2tpd/l2tp-control'
 ip link
 
