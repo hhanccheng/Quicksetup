@@ -61,11 +61,7 @@ check_ip "$public_ip" || exiterr "Cannot detect this server's public IP. Edit th
 
 echo "Installing packages required for the VPN..."
 
-pacman -S ppp xl2tpd
-
-
-echo "Installing Fail2Ban to protect SSH..."
-pacman -S fail2ban
+pacman -S ppp xl2tpd fail2ban
 
 echo "Creating VPN configuration..."
 
@@ -80,54 +76,29 @@ DNS_SRVS="\"$DNS_SRV1 $DNS_SRV2\""
 [ -n "$VPN_DNS_SRV1" ] && [ -z "$VPN_DNS_SRV2" ] && DNS_SRVS="$DNS_SRV1"
 
 # Create IPsec config
-conf_bk "/etc/ipsec.conf"
-cat > /etc/ipsec.conf <<EOF
-version 2.0
-
+cat >> /etc/ipsec.conf <<EOF
 config setup
-  virtual-private=%v4:10.0.0.0/8,%v4:192.168.0.0/16,%v4:172.16.0.0/12,%v4:!$L2TP_NET,%v4:!$XAUTH_NET
-  uniqueids=no
+     virtual_private=%v4:10.0.0.0/8,%v4:192.168.0.0/16,%v4:172.16.0.0/12
+     nat_traversal=yes
+     protostack=netkey            # default is auto, which will try netkey first
+     plutoopts="--interface=eth0" # Replace eth0 with your network interface or use %defaultroute to use default route
 
-conn shared
-  left=%defaultroute
-  leftid=$public_ip
-  right=%any
-  encapsulation=yes
-  authby=secret
-  pfs=no
-  rekey=no
-  keyingtries=5
-  dpddelay=30
-  dpdtimeout=120
-  dpdaction=clear
-  ikev2=never
-  ike=aes256-sha2,aes128-sha2,aes256-sha1,aes128-sha1,aes256-sha2;modp1024,aes128-sha1;modp1024
-  phase2alg=aes_gcm-null,aes128-sha1,aes256-sha1,aes256-sha2_512,aes128-sha2,aes256-sha2
-  ikelifetime=24h
-  salifetime=24h
-  sha2-truncbug=no
-
-conn l2tp-psk
-  auto=add
-  leftprotoport=17/1701
-  rightprotoport=17/%any
-  type=transport
-  also=shared
-
-conn xauth-psk
-  auto=add
-  leftsubnet=0.0.0.0/0
-  rightaddresspool=$XAUTH_POOL
-  modecfgdns=$DNS_SRVS
-  leftxauthserver=yes
-  rightxauthclient=yes
-  leftmodecfgserver=yes
-  rightmodecfgclient=yes
-  modecfgpull=yes
-  cisco-unity=yes
-  also=shared
-
-include /etc/ipsec.d/*.conf
+conn L2TP-PSK
+     authby=secret
+     pfs=no
+     auto=add
+     keyingtries=3
+     dpddelay=30
+     dpdtimeout=120
+     dpdaction=clear
+     rekey=yes
+     ikelifetime=8h
+     keylife=1h
+     type=transport
+     left=192.168.0.123           # Replace with your local IP address (private, behind NAT IP is okay as well)
+     leftprotoport=17/1701
+     right=68.68.32.79            # Replace with your VPN server's IP
+     rightprotoport=17/1701
 EOF
 
 if uname -m | grep -qi '^arm'; then
@@ -139,11 +110,10 @@ fi
 # Specify IPsec PSK
 conf_bk "/etc/ipsec.secrets"
 cat > /etc/ipsec.secrets <<EOF
-%any  %any  : PSK "$VPN_IPSEC_PSK"
+%any  %any  : PSK "$YOUR_IPSEC_PSK"
 EOF
 
 # Create xl2tpd config
-conf_bk "/etc/xl2tpd/xl2tpd.conf"
 cat > /etc/xl2tpd/xl2tpd.conf <<EOF
 [global]
 port = 1701
@@ -157,23 +127,31 @@ require authentication = yes
 name = l2tpd
 pppoptfile = /etc/ppp/options.xl2tpd
 length bit = yes
+
+[lac vpn-connection]
+lns = 68.68.32.79
+ppp debug = yes
+pppoptfile = /etc/ppp/options.l2tpd.client
+length bit = yes
 EOF
 
 # Set xl2tpd options
-conf_bk "/etc/ppp/options.xl2tpd"
 cat > /etc/ppp/options.xl2tpd <<EOF
-+mschap-v2
 ipcp-accept-local
 ipcp-accept-remote
+refuse-eap
+require-mschap-v2
 noccp
-auth
-mtu 1280
-mru 1280
-proxyarp
-lcp-echo-failure 4
-lcp-echo-interval 30
+noauth
+idle 1800
+mtu 1410
+mru 1410
+defaultroute
+usepeerdns
+debug
 connect-delay 5000
-ms-dns $DNS_SRV1
+name $YOUR_USERNAME
+password $YOUR_PASSWORD
 EOF
 
 if [ -z "$VPN_DNS_SRV1" ] || [ -n "$VPN_DNS_SRV2" ]; then
