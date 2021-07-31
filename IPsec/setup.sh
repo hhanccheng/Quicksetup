@@ -78,27 +78,26 @@ DNS_SRVS="\"$DNS_SRV1 $DNS_SRV2\""
 # Create IPsec config
 cat >> /etc/ipsec.conf <<EOF
 config setup
-     virtual_private=%v4:10.0.0.0/8,%v4:192.168.0.0/16,%v4:172.16.0.0/12
-     nat_traversal=yes
-     protostack=netkey            # default is auto, which will try netkey first
-     plutoopts="--interface=eth0" # Replace eth0 with your network interface or use %defaultroute to use default route
+
+conn %default
+    ikelifetime=60m
+    keylife=20m
+    rekeymargin=3m
+    keyingtries=1
+    keyexchange=ikev1
+    authby=secret
+    ike=aes128-sha1-modp1024,3des-sha1-modp1024!
+    esp=aes128-sha1-modp1024,3des-sha1-modp1024!
 
 conn L2TP-PSK
-     authby=secret
-     pfs=no
-     auto=add
-     keyingtries=3
-     dpddelay=30
-     dpdtimeout=120
-     dpdaction=clear
-     rekey=yes
-     ikelifetime=8h
-     keylife=1h
-     type=transport
-     left=192.168.0.123           # Replace with your local IP address (private, behind NAT IP is okay as well)
-     leftprotoport=17/1701
-     right=192.3.48.74            # Replace with your VPN server's IP
-     rightprotoport=17/1701
+    keyexchange=ikev1
+    left=%defaultroute
+    auto=add
+    authby=secret
+    type=transport
+    leftprotoport=17/1701
+    rightprotoport=17/1701
+    right=192.3.48.74
 EOF
 
 if uname -m | grep -qi '^arm'; then
@@ -284,10 +283,17 @@ chmod +x /etc/rc.local
 chmod 600 /etc/ipsec.secrets* /etc/ppp/chap-secrets* /etc/ipsec.d/passwd*
 
 mkdir -p /run/pluto
+mkdir -p /var/run/xl2tpd
 systemctl restart fail2ban
 ipsec rereadsecrets
 systemctl restart xl2tpd 
 systemctl restart strongswan
+sleep 8
+ipsec up L2TP-PSK
+sleep 8
+sudo bash -c 'echo "c vpn-connection" > /var/run/xl2tpd/l2tp-control'
+sleep 8
+ip address
 
 cat <<EOF
 
