@@ -154,7 +154,7 @@ password $YOUR_PASSWORD
 EOF
 
 if [ -z "$VPN_DNS_SRV1" ] || [ -n "$VPN_DNS_SRV2" ]; then
-cat >> /etc/ppp/options.xl2tpd <<EOF
+cat >> /etc/ppp/options.xl2tpd.client <<EOF
 ms-dns $DNS_SRV2
 EOF
 fi
@@ -284,16 +284,13 @@ chmod 600 /etc/ipsec.secrets* /etc/ppp/chap-secrets* /etc/ipsec.d/passwd*
 
 mkdir -p /run/pluto
 mkdir -p /var/run/xl2tpd
-systemctl restart fail2ban
+systemctl start fail2ban
 ipsec rereadsecrets
-systemctl restart xl2tpd 
-systemctl restart strongswan
-sleep 3
-ipsec up L2TP-PSK
-sleep 3
+systemctl start xl2tpd 
+systemctl start strongswan
+ipsec auto --up L2TP-PSK
 bash -c 'echo "c vpn-connection" > /var/run/xl2tpd/l2tp-control'
-sleep 3
-ip address
+ip link
 
 cat <<EOF
 
