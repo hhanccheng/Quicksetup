@@ -291,7 +291,7 @@ systemctl restart strongswan
 sleep 8
 ipsec up L2TP-PSK
 sleep 8
-sudo bash -c 'echo "c vpn-connection" > /var/run/xl2tpd/l2tp-control'
+bash -c 'echo "c vpn-connection" > /var/run/xl2tpd/l2tp-control'
 sleep 8
 ip address
 
