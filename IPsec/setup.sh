@@ -76,7 +76,7 @@ DNS_SRVS="\"$DNS_SRV1 $DNS_SRV2\""
 [ -n "$VPN_DNS_SRV1" ] && [ -z "$VPN_DNS_SRV2" ] && DNS_SRVS="$DNS_SRV1"
 
 # Create IPsec config
-cat >> /etc/ipsec.conf <<EOF
+cat > /etc/ipsec.conf <<EOF
 config setup
 
 conn %default
@@ -135,7 +135,7 @@ length bit = yes
 EOF
 
 # Set xl2tpd options
-cat > /etc/ppp/options.xl2tpd <<EOF
+cat > /etc/ppp/options.xl2tpd.client <<EOF
 ipcp-accept-local
 ipcp-accept-remote
 refuse-eap
@@ -172,7 +172,7 @@ $VPN_USER:$VPN_PASSWORD_ENC:xauth-psk
 EOF
 
 echo "Updating sysctl settings..."
-cat >> /etc/sysctl.conf <<EOF
+cat > /etc/sysctl.conf <<EOF
 
 kernel.msgmnb = 65536
 kernel.msgmax = 65536
@@ -288,11 +288,11 @@ systemctl restart fail2ban
 ipsec rereadsecrets
 systemctl restart xl2tpd 
 systemctl restart strongswan
-sleep 8
+sleep 3
 ipsec up L2TP-PSK
-sleep 8
+sleep 3
 bash -c 'echo "c vpn-connection" > /var/run/xl2tpd/l2tp-control'
-sleep 8
+sleep 3
 ip address
 
 cat <<EOF
