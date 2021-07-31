@@ -129,7 +129,7 @@ pppoptfile = /etc/ppp/options.xl2tpd
 length bit = yes
 
 [lac vpn-connection]
-lns = 68.68.32.79
+lns = 192.3.48.74
 ppp debug = yes
 pppoptfile = /etc/ppp/options.l2tpd.client
 length bit = yes
